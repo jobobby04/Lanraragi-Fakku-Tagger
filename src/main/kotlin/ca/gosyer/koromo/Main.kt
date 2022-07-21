@@ -64,6 +64,8 @@ suspend fun main(args: Array<String>) {
         exitProcess(204)
     }.toInt()
 
+    val offset = args.getOrNull(4)?.toInt() ?: 0
+
     val onlyUntagged = args.any { it.equals("onlyUntagged", true) }
 
     val lanraragiClient = HttpClient(OkHttp) {
@@ -104,6 +106,7 @@ suspend fun main(args: Array<String>) {
                 archives
             }
         }
+        .let { if (offset > 0) it.drop(offset) else it }
         .let { if (amount != 0) it.take(amount) else it }
 
     val client = HttpClient(OkHttp) {
