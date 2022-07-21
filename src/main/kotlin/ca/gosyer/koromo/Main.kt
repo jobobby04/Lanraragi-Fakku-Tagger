@@ -304,7 +304,7 @@ suspend fun main(args: Array<String>) {
                         logger,
                         fakkuResult.results,
                         fakkuResult.archive.title,
-                        { title },
+                        { FakkuSearch.apply(this) },
                         { "https://www.fakku.net$link" }
                     )
                     if (pandaResult != null) {
