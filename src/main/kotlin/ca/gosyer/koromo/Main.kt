@@ -530,8 +530,14 @@ private fun <T> chooseFuzzyResult(
                         "${index + 1}: ${boundExtractedResult.referent.toText()} (${boundExtractedResult.referent.toLink()})"
                     }.joinToString(separator = "\n", prefix = "\n")
             )
-            val result = readlnOrNull()?.trim()?.toIntOrNull()?.minus(1)
-            if (result != null && result != -1) {
+            var result: Int?
+            do {
+                result = readlnOrNull()?.trim()?.toIntOrNull()?.minus(1)
+                if (resultNotValid(result, results)) {
+                    logger.info("Retry")
+                }
+            } while (result == null || resultNotValid(result, results))
+            if (result != -1) {
                 results[result].referent.toLink()
             } else null
         }
@@ -539,3 +545,5 @@ private fun <T> chooseFuzzyResult(
         else -> null
     }
 }
+
+fun resultNotValid(result: Int?, results: List<*>) = result == null || (result != -1 && result !in 0..results.lastIndex)
