@@ -64,7 +64,7 @@ suspend fun main(args: Array<String>) {
         exitProcess(204)
     }.toInt()
 
-    val offset = args.getOrNull(4)?.toInt() ?: 0
+    val offset = args.getOrNull(4)?.toIntOrNull() ?: 0
 
     val onlyUntagged = args.any { it.equals("onlyUntagged", true) }
 
