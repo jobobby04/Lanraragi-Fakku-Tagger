@@ -96,6 +96,7 @@ suspend fun main(args: Array<String>) {
     logger.info("Getting all lanraragi galleries")
     val archives = lanraragiClient.get("$lanraragiLink/api/archives")
         .body<List<LanraragiArchive>>()
+        .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
         .let { archives ->
             if (onlyUntagged) {
                 logger.info("Getting untagged lanraragi gallery ids")
