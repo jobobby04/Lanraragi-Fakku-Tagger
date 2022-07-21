@@ -2,6 +2,7 @@ package ca.gosyer.koromo
 
 import com.willowtreeapps.fuzzywuzzy.ToStringFunction
 import kotlinx.serialization.Serializable
+import org.jsoup.parser.Parser
 
 @Serializable
 data class FakkuSearch(
@@ -12,7 +13,7 @@ data class FakkuSearch(
 ) {
     companion object : ToStringFunction<FakkuSearch> {
         override fun apply(item: FakkuSearch): String {
-            return item.title
+            return Parser.unescapeEntities(item.title, true)
         }
     }
 }
