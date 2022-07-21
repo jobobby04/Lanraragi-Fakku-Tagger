@@ -107,7 +107,7 @@ suspend fun main(args: Array<String>) {
             }
         }
         .let { if (offset > 0) it.drop(offset) else it }
-        .let { if (amount != 0) it.take(amount) else it }
+        .let { if (amount > 0) it.take(amount) else it }
 
     val client = HttpClient(OkHttp) {
         engine {
@@ -154,7 +154,8 @@ suspend fun main(args: Array<String>) {
         exitProcess(205)
     }
 
-    var progress = 1
+    var progress = 1 + offset.coerceAtLeast(0)
+    val total = archives.size + offset.coerceAtLeast(0)
     archives
         .asFlow()
         .onEach { delay(500) }
@@ -359,7 +360,7 @@ suspend fun main(args: Array<String>) {
             } else {
                 logger.info("Failed to get online tags for '${pandaResult.archive.title}'")
             }
-            logger.info("Finished ${progress++}/${archives.size}")
+            logger.info("Finished ${progress++}/${total}")
         }
 }
 
