@@ -24,6 +24,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Cookie
+import io.ktor.http.encodeURLPath
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.encodeBase64
@@ -230,7 +231,7 @@ suspend fun main(args: Array<String>) {
                 is KoromoResult.KoromoNoNewTags -> {
                     logger.info("Searching for '${it.archive.title}'")
                     val response = client.get(
-                        "https://www.fakku.net/suggest/${it.archive.title}"
+                        "https://www.fakku.net/suggest/${it.archive.title}".encodeURLPath()
                     ) {
                         headers {
                             append(
@@ -463,7 +464,7 @@ private suspend fun searchPanda(
     search: String
 ): Elements {
     return Jsoup.parse(
-        client.get("https://panda.chaika.moe/search/?qsearch=${search}")
+        client.get("https://panda.chaika.moe/search/?qsearch=${search}".encodeURLPath())
             .bodyAsText()
     )
         .body()
@@ -488,7 +489,7 @@ private suspend fun getPandaLink(
     title: String,
 ): String? {
     val searchResults = Jsoup.parse(
-        client.get("https://panda.chaika.moe/search/?qsearch=${title}")
+        client.get("https://panda.chaika.moe/search/?qsearch=${title}".encodeURLPath())
             .bodyAsText()
     )
         .body()
