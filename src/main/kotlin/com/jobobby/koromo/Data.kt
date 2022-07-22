@@ -1,4 +1,4 @@
-package ca.gosyer.link
+package com.jobobby.koromo
 
 import kotlinx.serialization.Serializable
 

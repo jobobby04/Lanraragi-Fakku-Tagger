@@ -1,9 +1,5 @@
-package ca.gosyer.koromo
+package com.jobobby.koromo
 
-import ca.gosyer.link.LanraragiArchive
-import ca.gosyer.link.LanraragiPlugin
-import ca.gosyer.link.LanraragiPluginResponse
-import ca.gosyer.link.RateLimitInterceptor
 import com.willowtreeapps.fuzzywuzzy.ToStringFunction
 import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import com.willowtreeapps.fuzzywuzzy.diffutils.model.BoundExtractedResult
@@ -220,18 +216,18 @@ suspend fun main(args: Array<String>) {
                 KoromoResult.KoromoFailed(archive)
             }
         }
-        .map {
-            when (it) {
+        .map { koromoResult ->
+            when (koromoResult) {
                 is KoromoResult.WithFakku -> FakkuResult.AlreadyHaveLink(
-                    it.archive,
-                    it.fakkuLink
+                    koromoResult.archive,
+                    koromoResult.fakkuLink
                 )
                 is KoromoResult.WithoutFakku,
                 is KoromoResult.KoromoFailed,
                 is KoromoResult.KoromoNoNewTags -> {
-                    logger.info("Searching for '${it.archive.title}'")
+                    logger.info("Searching for '${koromoResult.archive.title}'")
                     val response = client.get(
-                        "https://www.fakku.net/suggest/${it.archive.title}".encodeURLPath()
+                        "https://www.fakku.net/suggest/${koromoResult.archive.title}".encodeURLPath()
                     ) {
                         headers {
                             append(
@@ -255,10 +251,10 @@ suspend fun main(args: Array<String>) {
                         }
                     }
                     FakkuResult.WithSearch(
-                        it.archive,
+                        koromoResult.archive,
                         if (response.status.isSuccess()) {
                             FuzzySearch.extractAll(
-                                query = it.archive.title,
+                                query = koromoResult.archive.title,
                                 choices = response.body<List<FakkuSearch>>()
                                     .filter { it.type == "comic" },
                                 toStringFunction = FakkuSearch,
@@ -269,16 +265,16 @@ suspend fun main(args: Array<String>) {
                 }
             }
         }
-        .onEach {
-            when (it) {
-                is FakkuResult.AlreadyHaveLink -> logger.info("FAKKU link found for '${it.archive.title}'(${it.fakkuLink})")
-                is FakkuResult.WithSearch -> if (!it.results.isNullOrEmpty()) {
-                    logger.info("FAKKU search results found for '${it.archive.title}'")
-                    it.results.forEach {
+        .onEach { fakkuResult ->
+            when (fakkuResult) {
+                is FakkuResult.AlreadyHaveLink -> logger.info("FAKKU link found for '${fakkuResult.archive.title}'(${fakkuResult.fakkuLink})")
+                is FakkuResult.WithSearch -> if (!fakkuResult.results.isNullOrEmpty()) {
+                    logger.info("FAKKU search results found for '${fakkuResult.archive.title}'")
+                    fakkuResult.results.forEach {
                         logger.info(it.toString())
                     }
                 } else {
-                    logger.info("No results on FAKKU for '${it.archive.title}'")
+                    logger.info("No results on FAKKU for '${fakkuResult.archive.title}'")
                 }
             }
         }

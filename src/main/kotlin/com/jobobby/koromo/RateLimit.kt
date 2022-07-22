@@ -1,4 +1,4 @@
-package ca.gosyer.link
+package com.jobobby.koromo
 
 import okhttp3.Interceptor
 import okhttp3.Response

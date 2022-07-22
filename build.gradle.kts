@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.serialization") version "1.7.10"
 }
 
-group = "ca.gosyer"
+group = "com.jobobby"
 version = "1.3"
 
 repositories {
@@ -49,7 +49,7 @@ tasks.register<Jar>("fatJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     manifest {
-        attributes["Main-Class"] = "ca.gosyer.koromo.MainKt"
+        attributes["Main-Class"] = "com.jobobby.koromo.MainKt"
     }
 
     from(sourceSets.main.get().output)

@@ -1,4 +1,4 @@
-package ca.gosyer.koromo
+package com.jobobby.koromo
 
 import com.willowtreeapps.fuzzywuzzy.ToStringFunction
 import kotlinx.serialization.Serializable
