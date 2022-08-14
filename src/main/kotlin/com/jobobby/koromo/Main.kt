@@ -65,6 +65,10 @@ suspend fun main(args: Array<String>) {
 
     val onlyUntagged = args.any { it.equals("onlyUntagged", true) }
 
+    val cleanSearchTitles = args.any { it.equals("cleanSearchTitles", true) }
+
+    val resetAllTags = args.any { it.equals("resetAllTags", true) }
+
     val lanraragiClient = HttpClient(OkHttp) {
         expectSuccess = true
         install(DefaultRequest) {
@@ -212,6 +216,16 @@ suspend fun main(args: Array<String>) {
                     KoromoResult.KoromoNoNewTags(archive)
                 }
             } else {
+                if (resetAllTags) {
+                    val dateAdded = archive.tags.split(",").map { it.trim() }
+                        .find { it.startsWith("date_added:") }
+                    logger.info("Cleaning tags for '${archive.title}'")
+                    sendNewTags(
+                        lanraragiClient,
+                        "$lanraragiLink/api/archives/${archive.arcid}/metadata",
+                        dateAdded.orEmpty()
+                    )
+                }
                 logger.info("No koromo metadata for '${archive.title}'")
                 KoromoResult.KoromoFailed(archive)
             }
@@ -225,9 +239,16 @@ suspend fun main(args: Array<String>) {
                 is KoromoResult.WithoutFakku,
                 is KoromoResult.KoromoFailed,
                 is KoromoResult.KoromoNoNewTags -> {
-                    logger.info("Searching for '${koromoResult.archive.title}'")
+                    val searchTitle = if (cleanSearchTitles) {
+                        koromoResult.archive.title
+                            .replace(squareBracketsRegex, "")
+                            .replace(circleBracketsRegex, "")
+                            .replace(curlyBracketsRegex, "")
+                            .trim()
+                    } else koromoResult.archive.title
+                    logger.info("Searching for '${searchTitle}'")
                     val response = client.get(
-                        "https://www.fakku.net/suggest/${koromoResult.archive.title}".encodeURLPath()
+                        "https://www.fakku.net/suggest/${searchTitle}".encodeURLPath()
                     ) {
                         headers {
                             append(
@@ -254,13 +275,14 @@ suspend fun main(args: Array<String>) {
                         koromoResult.archive,
                         if (response.status.isSuccess()) {
                             FuzzySearch.extractAll(
-                                query = koromoResult.archive.title,
+                                query = searchTitle,
                                 choices = response.body<List<FakkuSearch>>()
                                     .filter { it.type == "comic" },
                                 toStringFunction = FakkuSearch,
                                 cutoff = 95
                             )
-                        } else null
+                        } else null,
+                        searchTitle
                     )
                 }
             }
@@ -269,7 +291,7 @@ suspend fun main(args: Array<String>) {
             when (fakkuResult) {
                 is FakkuResult.AlreadyHaveLink -> logger.info("FAKKU link found for '${fakkuResult.archive.title}'(${fakkuResult.fakkuLink})")
                 is FakkuResult.WithSearch -> if (!fakkuResult.results.isNullOrEmpty()) {
-                    logger.info("FAKKU search results found for '${fakkuResult.archive.title}'")
+                    logger.info("FAKKU search results found for '${fakkuResult.searchTitle}'")
                     fakkuResult.results.forEach {
                         logger.info(it.toString())
                     }
@@ -299,14 +321,14 @@ suspend fun main(args: Array<String>) {
                     val pandaResult = chooseFuzzyResult(
                         logger,
                         fakkuResult.results,
-                        fakkuResult.archive.title,
+                        fakkuResult.searchTitle,
                         { FakkuSearch.apply(this) },
                         { "https://www.fakku.net$link" }
                     )
                     if (pandaResult != null) {
                         PandaResult.Fakku(fakkuResult.archive, pandaResult)
                     } else {
-                        val pandaLink = getPandaLink(logger, client, fakkuResult.archive.title)
+                        val pandaLink = getPandaLink(logger, client, fakkuResult.searchTitle)
 
                         if (pandaLink != null) {
                             val fakkuLink = Jsoup.parse(client.get(pandaLink).bodyAsText())
@@ -423,7 +445,8 @@ sealed class FakkuResult {
 
     data class WithSearch(
         override val archive: LanraragiArchive,
-        val results: List<BoundExtractedResult<FakkuSearch>>?
+        val results: List<BoundExtractedResult<FakkuSearch>>?,
+        val searchTitle: String
     ) : FakkuResult()
 }
 
@@ -543,3 +566,9 @@ private fun <T> chooseFuzzyResult(
 }
 
 fun resultNotValid(result: Int?, results: List<*>) = result == null || (result != -1 && result !in 0..results.lastIndex)
+
+val squareBracketsRegex = "\\[.*?]".toRegex()
+
+val circleBracketsRegex = "\\(.*?\\)".toRegex()
+
+val curlyBracketsRegex = "\\{.*?}".toRegex()
