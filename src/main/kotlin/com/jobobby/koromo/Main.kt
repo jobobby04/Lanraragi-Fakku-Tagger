@@ -176,10 +176,11 @@ suspend fun main(args: Array<String>) {
                     val dateAdded = archive.tags.split(",").map { it.trim() }
                         .find { it.startsWith("date_added:") }
                     logger.info("Cleaning tags for '${archive.title}'")
-                    sendNewTags(
+                    sendUpdatedMetadata(
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                        dateAdded.orEmpty()
+                        dateAdded.orEmpty(),
+                        null
                     )
                     dateAdded
                 } else archive.tags
@@ -196,7 +197,12 @@ suspend fun main(args: Array<String>) {
                 if (!newResponse.data.new_tags.isNullOrBlank()) {
                     val newTags = (oldTags?.plus(",").orEmpty() + newResponse.data.new_tags).trim()
                     logger.info("Found tags for '${archive.title}' ($newTags)")
-                    sendNewTags(lanraragiClient, "$lanraragiLink/api/archives/${archive.arcid}/metadata", newTags)
+                    sendUpdatedMetadata(
+                        lanraragiClient,
+                        "$lanraragiLink/api/archives/${archive.arcid}/metadata",
+                        newTags,
+                        newResponse.data.title
+                    )
 
                     val fakkuLink = newResponse.data.new_tags.split(',')
                         .map { it.trim() }
@@ -220,10 +226,11 @@ suspend fun main(args: Array<String>) {
                     val dateAdded = archive.tags.split(",").map { it.trim() }
                         .find { it.startsWith("date_added:") }
                     logger.info("Cleaning tags for '${archive.title}'")
-                    sendNewTags(
+                    sendUpdatedMetadata(
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                        dateAdded.orEmpty()
+                        dateAdded.orEmpty(),
+                        null
                     )
                 }
                 logger.info("No koromo metadata for '${archive.title}'")
@@ -384,10 +391,18 @@ suspend fun main(args: Array<String>) {
         }
 }
 
-private suspend fun sendNewTags(client: HttpClient, url: String, newTags: String) {
+private suspend fun sendUpdatedMetadata(
+    client: HttpClient,
+    url: String,
+    newTags: String,
+    newTitle: String?
+) {
     client.put(url) {
         url {
             parameters.append("tags", newTags)
+            if (newTitle != null) {
+                parameters.append("title", newTitle)
+            }
         }
     }
 }
