@@ -375,11 +375,12 @@ suspend fun main(args: Array<String>) {
                 if (!response.data.new_tags.isNullOrBlank()) {
                     val newTags = (pandaResult.archive.tags + "," + response.data.new_tags).trim()
                     logger.info("Found new tags for '${pandaResult.archive.title}' (${response.data.new_tags.trimStart()})")
-                    lanraragiClient.put("$lanraragiLink/api/archives/${pandaResult.archive.arcid}/metadata") {
-                        url {
-                            parameters.append("tags", newTags)
-                        }
-                    }
+                    sendUpdatedMetadata(
+                        lanraragiClient,
+                        "$lanraragiLink/api/archives/${pandaResult.archive.arcid}/metadata",
+                        newTags,
+                        response.data.title
+                    )
                     logger.info("Finished metadata process for '${pandaResult.archive.title}'")
                 } else {
                     logger.info("No new tags for '${pandaResult.archive.title}'")
