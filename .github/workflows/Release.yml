@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ReleaseJar:
+    name: Make a release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: fatJar
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "build/libs/*.jar"
+          draft: true
+          token: ${{ secrets.GITHUB_TOKEN }}

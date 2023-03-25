@@ -7,7 +7,7 @@ data class LanraragiPlugin(
     val author: String,
     val cooldown: Int? = null,
     val description: String,
-    val icon: String,
+    val icon: String? = null,
     val login_from: String? = null,
     val name: String,
     val namespace: String,

@@ -20,20 +20,21 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Cookie
-import io.ktor.http.encodeURLPath
+import io.ktor.http.encodeURLParameter
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.encodeBase64
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.slf4j.impl.SimpleLogger
+import org.slf4j.simple.SimpleLogger
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -65,7 +66,7 @@ suspend fun main(args: Array<String>) {
 
     val onlyUntagged = args.any { it.equals("onlyUntagged", true) }
 
-    val cleanSearchTitles = args.any { it.equals("cleanSearchTitles", true) }
+    val dontCleanSearchTitles = args.any { it.equals("dontCleanSearchTitles", true) }
 
     val resetAllTags = args.any { it.equals("resetAllTags", true) }
 
@@ -246,16 +247,18 @@ suspend fun main(args: Array<String>) {
                 is KoromoResult.WithoutFakku,
                 is KoromoResult.KoromoFailed,
                 is KoromoResult.KoromoNoNewTags -> {
-                    val searchTitle = if (cleanSearchTitles) {
+                    val searchTitle = if (dontCleanSearchTitles) {
+                        koromoResult.archive.title
+                    } else {
                         koromoResult.archive.title
                             .replace(squareBracketsRegex, "")
                             .replace(circleBracketsRegex, "")
                             .replace(curlyBracketsRegex, "")
                             .trim()
-                    } else koromoResult.archive.title
+                    }
                     logger.info("Searching for '${searchTitle}'")
                     val response = client.get(
-                        "https://www.fakku.net/suggest/${searchTitle}".encodeURLPath()
+                        "https://www.fakku.net/suggest/${searchTitle.encodeURLParameter()}"
                     ) {
                         headers {
                             append(
@@ -360,6 +363,9 @@ suspend fun main(args: Array<String>) {
                 is PandaResult.None -> logger.info("No link found for '${it.archive.title}'")
             }
             logger.debug(it.toString())
+        }
+        .onCompletion {
+            exitProcess(0)
         }
         .collect { pandaResult ->
             if (pandaResult is PandaResult.Success) {
@@ -499,7 +505,7 @@ private suspend fun searchPanda(
     search: String
 ): Elements {
     return Jsoup.parse(
-        client.get("https://panda.chaika.moe/search/?qsearch=${search}".encodeURLPath())
+        client.get("https://panda.chaika.moe/search/?qsearch=${search.encodeURLParameter()}")
             .bodyAsText()
     )
         .body()
@@ -523,10 +529,9 @@ private suspend fun getPandaLink(
     client: HttpClient,
     title: String,
 ): String? {
-    val searchResults = Jsoup.parse(
-        client.get("https://panda.chaika.moe/search/?qsearch=${title}".encodeURLPath())
-            .bodyAsText()
-    )
+    val searchResults = client.get("https://panda.chaika.moe/search/?qsearch=${title.encodeURLParameter()}")
+        .bodyAsText()
+        .let(Jsoup::parse)
         .body()
         .select(".result-list a")
 
@@ -565,13 +570,10 @@ private fun <T> chooseFuzzyResult(
                         "${index + 1}: ${boundExtractedResult.referent.toText()} (${boundExtractedResult.referent.toLink()})"
                     }.joinToString(separator = "\n", prefix = "\n")
             )
-            var result: Int?
-            do {
-                result = readlnOrNull()?.trim()?.toIntOrNull()?.minus(1)
-                if (resultNotValid(result, results)) {
-                    logger.info("Retry")
-                }
-            } while (result == null || resultNotValid(result, results))
+
+            val result = getInput(logger, { it?.toIntOrNull()?.minus(1) }) { result ->
+                result == null || (result != -1 && result !in 0..results.lastIndex)
+            }
             if (result != -1) {
                 results[result].referent.toLink()
             } else null
@@ -581,7 +583,20 @@ private fun <T> chooseFuzzyResult(
     }
 }
 
-fun resultNotValid(result: Int?, results: List<*>) = result == null || (result != -1 && result !in 0..results.lastIndex)
+fun <T> getInput(
+    logger: Logger,
+    mapper: (String?) -> T,
+    resultNotValid: (T?) -> Boolean
+): T & Any {
+    var result: T?
+    do {
+        result = readlnOrNull()?.trim()?.let(mapper)
+        if (resultNotValid(result)) {
+            logger.info("Retry")
+        }
+    } while (result == null || resultNotValid(result))
+    return result
+}
 
 val squareBracketsRegex = "\\[.*?]".toRegex()
 

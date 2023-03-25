@@ -16,10 +16,10 @@ It uses Java so make sure you have that installed
 
 Example command:
 ```
-java -jar LanraragiFakkuTagger-1.4.jar <lanraragi_api_key> <lanraragi link, something like http://192.168.0.5> <fakku_sid_cookie> <amount to process, 0 for all> <offset to start with, defaults to 0>
+java -jar LanraragiFakkuTagger-1.5.jar <lanraragi_api_key> <lanraragi link, something like http://192.168.0.5> <fakku_sid_cookie> <amount to process, 0 for all> <offset to start with, defaults to 0>
 ```
 Additional modifiers can be added, such as:
 - `debug` for debug output
 - `onlyUntagged` to only try to tag untagged galleries
-- `cleanSearchTitles` for cleaning the titles for search
+- `dontCleanSearchTitles` disable cleaning the titles before search
 - `resetAllTags` resets the galleries tags before it tries to re-tag it
