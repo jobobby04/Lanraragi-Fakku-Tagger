@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.jobobby"
-version = "1.5"
+version = "1.6"
 
 repositories {
     mavenCentral()
@@ -19,7 +19,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
 
-    implementation("org.jsoup:jsoup:1.15.3")
+    implementation("org.jsoup:jsoup:1.15.4")
 
     implementation("com.willowtreeapps:fuzzywuzzy-kotlin-jvm:0.9.0")
 

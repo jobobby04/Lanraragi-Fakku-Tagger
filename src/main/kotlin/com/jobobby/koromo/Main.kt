@@ -163,6 +163,23 @@ suspend fun main(args: Array<String>) {
         .asFlow()
         .onEach { delay(500) }
         .map { archive ->
+            val oldTags = if (resetAllTags) {
+                val dateAdded = archive.tags.split(",").map { it.trim() }
+                    .find { it.startsWith("date_added:") }
+                if (!onlyUntagged && archive.tags.isNotBlank() && dateAdded != archive.tags) {
+                    logger.info("Cleaning tags for '${archive.title}'")
+                    sendUpdatedMetadata(
+                        lanraragiClient,
+                        "$lanraragiLink/api/archives/${archive.arcid}/metadata",
+                        dateAdded.orEmpty(),
+                        null
+                    )
+                }
+                dateAdded
+            } else archive.tags.ifBlank { null }
+
+            logger.info("Using koromo plugin for '${archive.title}'")
+
             val response = usePlugin(
                 client = lanraragiClient,
                 lanraragiLink = lanraragiLink,
@@ -173,39 +190,18 @@ suspend fun main(args: Array<String>) {
 
             if (response.error == null) {
                 logger.info("Found koromo json for '${archive.title}'")
-                val oldTags = if (!onlyUntagged) {
-                    val dateAdded = archive.tags.split(",").map { it.trim() }
-                        .find { it.startsWith("date_added:") }
-                    logger.info("Cleaning tags for '${archive.title}'")
-                    sendUpdatedMetadata(
-                        lanraragiClient,
-                        "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                        dateAdded.orEmpty(),
-                        null
-                    )
-                    dateAdded
-                } else archive.tags
 
-                logger.info("Using koromo plugin for '${archive.title}'")
-
-                val newResponse = usePlugin(
-                    client = lanraragiClient,
-                    lanraragiLink = lanraragiLink,
-                    apiKey = apiKey,
-                    plugin = koromoPlugin,
-                    archive = archive
-                )
-                if (!newResponse.data.new_tags.isNullOrBlank()) {
-                    val newTags = (oldTags?.plus(",").orEmpty() + newResponse.data.new_tags).trim()
+                if (!response.data.new_tags.isNullOrBlank()) {
+                    val newTags = (oldTags?.plus(",").orEmpty() + response.data.new_tags).trim()
                     logger.info("Found tags for '${archive.title}' ($newTags)")
                     sendUpdatedMetadata(
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${archive.arcid}/metadata",
                         newTags,
-                        newResponse.data.title
+                        response.data.title
                     )
 
-                    val fakkuLink = newResponse.data.new_tags.split(',')
+                    val fakkuLink = response.data.new_tags.split(',')
                         .map { it.trim() }
                         .find { it.startsWith("source:") && it.contains("fakku.net", true) }
                     if (fakkuLink != null) {
@@ -223,17 +219,6 @@ suspend fun main(args: Array<String>) {
                     KoromoResult.KoromoNoNewTags(archive)
                 }
             } else {
-                if (resetAllTags) {
-                    val dateAdded = archive.tags.split(",").map { it.trim() }
-                        .find { it.startsWith("date_added:") }
-                    logger.info("Cleaning tags for '${archive.title}'")
-                    sendUpdatedMetadata(
-                        lanraragiClient,
-                        "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                        dateAdded.orEmpty(),
-                        null
-                    )
-                }
                 logger.info("No koromo metadata for '${archive.title}'")
                 KoromoResult.KoromoFailed(archive)
             }
