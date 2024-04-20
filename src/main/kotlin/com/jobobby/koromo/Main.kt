@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.serialization.json.Json
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
@@ -80,7 +81,11 @@ suspend fun main(args: Array<String>) {
             }
         }
         install(ContentNegotiation) {
-            json()
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                }
+            )
         }
         if (debug) {
             install(Logging) {
@@ -119,7 +124,11 @@ suspend fun main(args: Array<String>) {
             addInterceptor(RateLimitInterceptor(4, 1, TimeUnit.SECONDS))
         }
         install(ContentNegotiation) {
-            json()
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                }
+            )
         }
         install(HttpCookies) {
             default {
