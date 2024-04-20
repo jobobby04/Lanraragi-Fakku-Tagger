@@ -562,7 +562,7 @@ private fun <T> chooseFuzzyResult(
     toLink: T.() -> String
 ): String? {
     return when {
-        !results.isNullOrEmpty() && results.none { it.score == 100 } -> {
+        !results.isNullOrEmpty() && (results.none { it.score == 100 } || results.count { it.score == 100 } > 1) -> {
             logger.info(
                 "\n\nFound multiple results for '${title}', select the correct result, or 0 if none." +
                     results.mapIndexed { index, boundExtractedResult ->
