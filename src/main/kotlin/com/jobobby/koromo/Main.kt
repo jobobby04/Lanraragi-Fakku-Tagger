@@ -19,7 +19,9 @@ import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.request
 import io.ktor.http.Cookie
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodeURLParameter
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -140,13 +142,16 @@ suspend fun main(args: Array<String>) {
     }
 
     logger.info("Getting FAKKU page to check login status")
-    val fakkuPage = client.get("https://www.fakku.net/subscription") {
+    val fakkuResponse = client.get("https://www.fakku.net/subscription") {
         expectSuccess = true
-    }.bodyAsText()
+    }
+
+    logger.info("${fakkuResponse.status} - ${fakkuResponse.request.url}")
 
     logger.info("Checking FAKKU login")
     if (
-        Jsoup.parse(fakkuPage)
+        fakkuResponse.request.url.toString() == "https://www.fakku.net/" ||
+        Jsoup.parse(fakkuResponse.bodyAsText())
             .body()
             .selectFirst(".button-green-600")
             ?.attr("href")
