@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - v*
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,6 +29,7 @@ jobs:
         run: ./gradlew fatJar
 
       - uses: ncipollo/release-action@v1
+        if: ${{ github.event_name == 'push' }}
         with:
           artifacts: "build/libs/*.jar"
           draft: true
