@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.24"
-    kotlin("plugin.serialization") version "1.9.23"
+    kotlin("plugin.serialization") version "1.9.24"
 }
 
 group = "com.jobobby"
