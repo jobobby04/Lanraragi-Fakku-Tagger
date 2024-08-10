@@ -37,8 +37,8 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
-    implementation("org.slf4j:slf4j-api:2.0.15")
-    implementation("org.slf4j:slf4j-simple:2.0.15")
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-simple:2.0.16")
 
     testImplementation(kotlin("test"))
 }
