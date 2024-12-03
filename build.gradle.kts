@@ -30,7 +30,7 @@ dependencies {
 
     implementation("com.willowtreeapps:fuzzywuzzy-kotlin-jvm:0.9.0")
 
-    val ktorVersion = "2.3.12"
+    val ktorVersion = "3.0.2"
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-logging:$ktorVersion")
     implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
