@@ -158,7 +158,7 @@ suspend fun main(args: Array<String>) {
 
     logger.info("Getting FAKKU page to check login status")
     val fakkuResponse = client.get("https://www.fakku.net/subscription") {
-        expectSuccess = true
+        expectSuccess = false
     }
 
     logger.info("${fakkuResponse.status} - ${fakkuResponse.request.url}")
@@ -168,7 +168,7 @@ suspend fun main(args: Array<String>) {
         fakkuResponse.request.url.toString() == "https://www.fakku.net/" ||
         Jsoup.parse(fakkuResponse.bodyAsText())
             .body()
-            .selectFirst("a.bg-green-700")
+            .selectFirst("a.bg-green-600")
             ?.attr("href")
             .equals("/subscription/payment")
             .not()
@@ -267,9 +267,19 @@ suspend fun main(args: Array<String>) {
                                 response.data.title
                             )
 
-                            FileResult.WithoutFakku(
-                                archive.copy(tags = newTags)
-                            )
+                            val fakkuLink = response.data.new_tags.split(',')
+                                .map { it.trim() }
+                                .find { it.startsWith("source:") && it.contains("fakku.net", true) }
+                            if (fakkuLink != null) {
+                                FileResult.WithFakku(
+                                    archive.copy(tags = newTags),
+                                    fakkuLink.substringAfter(':').trimStart()
+                                )
+                            } else {
+                                FileResult.WithoutFakku(
+                                    archive.copy(tags = newTags)
+                                )
+                            }
                         } else {
                             logger.info("No new tags for '${archive.title}'")
                             FileResult.NoNewTags(archive)
