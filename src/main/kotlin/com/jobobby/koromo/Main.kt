@@ -60,9 +60,9 @@ suspend fun main(args: Array<String>) {
         exitProcess(203)
     }
     val mode = args.getOrNull(3).takeIf {
-        it == "koromo" || it == "koharu"
+        it == "koromo" || it == "koharu" || it == "specyaml"
     } ?: run {
-        logger.error("Missing Mode(koromo or koharu)")
+        logger.error("Missing Mode(koromo, koharu, or specyaml)")
         exitProcess(206)
     }
     val amount = args.getOrElse(4) {
@@ -77,6 +77,8 @@ suspend fun main(args: Array<String>) {
     val dontCleanSearchTitles = args.any { it.equals("dontCleanSearchTitles", true) }
 
     val resetAllTags = args.any { it.equals("resetAllTags", true) }
+
+    val dontSearch = args.any { it.equals("dontSearch", true) }
 
     val lanraragiClient = HttpClient(OkHttp) {
         expectSuccess = true
@@ -105,6 +107,7 @@ suspend fun main(args: Array<String>) {
         .body<List<LanraragiPlugin>>()
     val koromoPlugin = plugins.first { it.name == "koromo" }
     val koharuPlugin = plugins.first { it.name == "Koushoku/Koharu.yaml" }
+    val specyamlPlugin = plugins.first { it.name == "SpecYAML" }
     val fakkuPlugin = plugins.first { it.name == "FAKKU" }
     val pandaPlugin = plugins.first { it.name == "Chaika.moe" }
 
@@ -202,96 +205,36 @@ suspend fun main(args: Array<String>) {
             logger.info("Using $mode plugin for '${archive.title}'")
 
             when (mode) {
-                "koromo" -> {
-                    val response = usePlugin(
-                        client = lanraragiClient,
-                        lanraragiLink = lanraragiLink,
-                        apiKey = apiKey,
-                        plugin = koromoPlugin,
-                        archive = archive
-                    )
-
-                    if (response.error == null) {
-                        logger.info("Found koromo json for '${archive.title}'")
-
-                        if (!response.data.new_tags.isNullOrBlank()) {
-                            val newTags = (oldTags?.plus(",").orEmpty() + response.data.new_tags).trim()
-                            logger.info("Found tags for '${archive.title}' ($newTags)")
-                            sendUpdatedMetadata(
-                                lanraragiClient,
-                                "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                                newTags,
-                                response.data.title,
-                                response.data.summary,
-                            )
-
-                            val fakkuLink = response.data.new_tags.split(',')
-                                .map { it.trim() }
-                                .find { it.startsWith("source:") && it.contains("fakku.net", true) }
-                            if (fakkuLink != null) {
-                                FileResult.WithFakku(
-                                    archive.copy(tags = newTags),
-                                    fakkuLink.substringAfter(':').trimStart()
-                                )
-                            } else {
-                                FileResult.WithoutFakku(
-                                    archive.copy(tags = newTags)
-                                )
-                            }
-                        } else {
-                            logger.info("No new tags for '${archive.title}'")
-                            FileResult.NoNewTags(archive)
-                        }
-                    } else {
-                        logger.info("No koromo metadata for '${archive.title}'")
-                        FileResult.PluginFailed(archive)
-                    }
-                }
-                "koharu" -> {
-                    val response = usePlugin(
-                        client = lanraragiClient,
-                        lanraragiLink = lanraragiLink,
-                        apiKey = apiKey,
-                        plugin = koharuPlugin,
-                        archive = archive
-                    )
-
-                    if (response.error == null) {
-                        logger.info("Found koharu yaml for '${archive.title}'")
-
-                        if (!response.data.new_tags.isNullOrBlank()) {
-                            val newTags = (oldTags?.plus(",").orEmpty() + response.data.new_tags).trim()
-                            logger.info("Found tags for '${archive.title}' ($newTags)")
-                            sendUpdatedMetadata(
-                                lanraragiClient,
-                                "$lanraragiLink/api/archives/${archive.arcid}/metadata",
-                                newTags,
-                                response.data.title,
-                                response.data.summary,
-                            )
-
-                            val fakkuLink = response.data.new_tags.split(',')
-                                .map { it.trim() }
-                                .find { it.startsWith("source:") && it.contains("fakku.net", true) }
-                            if (fakkuLink != null) {
-                                FileResult.WithFakku(
-                                    archive.copy(tags = newTags),
-                                    fakkuLink.substringAfter(':').trimStart()
-                                )
-                            } else {
-                                FileResult.WithoutFakku(
-                                    archive.copy(tags = newTags)
-                                )
-                            }
-                        } else {
-                            logger.info("No new tags for '${archive.title}'")
-                            FileResult.NoNewTags(archive)
-                        }
-                    } else {
-                        logger.info("No koharu metadata for '${archive.title}'")
-                        FileResult.PluginFailed(archive)
-                    }
-                }
+                "koromo" -> processPlugin(
+                    logger = logger,
+                    client = lanraragiClient,
+                    oldTags = oldTags,
+                    lanraragiLink = lanraragiLink,
+                    apiKey = apiKey,
+                    plugin = koromoPlugin,
+                    archive = archive,
+                    pluginName = "koromo"
+                )
+                "koharu" -> processPlugin(
+                    logger = logger,
+                    client = lanraragiClient,
+                    oldTags = oldTags,
+                    lanraragiLink = lanraragiLink,
+                    apiKey = apiKey,
+                    plugin = koharuPlugin,
+                    archive = archive,
+                    pluginName = "koharu"
+                )
+                "specyaml" -> processPlugin(
+                    logger = logger,
+                    client = lanraragiClient,
+                    oldTags = oldTags,
+                    lanraragiLink = lanraragiLink,
+                    apiKey = apiKey,
+                    plugin = specyamlPlugin,
+                    archive = archive,
+                    pluginName = "specyaml"
+                )
                 else -> {
                     logger.error("Somehow proceeded with invalid mode")
                     exitProcess(207)
@@ -315,6 +258,13 @@ suspend fun main(args: Array<String>) {
                             .replace(circleBracketsRegex, "")
                             .replace(curlyBracketsRegex, "")
                             .trim()
+                    }
+                    if (dontSearch) {
+                        return@map FakkuResult.WithSearch(
+                            archive = koromoResult.archive,
+                            results = emptyList(),
+                            searchTitle = searchTitle
+                        )
                     }
                     logger.info("Searching for '${searchTitle}'")
                     val url = "https://www.fakku.net/suggest/${searchTitle.encodeURLParameter()}"
@@ -370,6 +320,8 @@ suspend fun main(args: Array<String>) {
                     if (client.get(fakkuResult.fakkuLink).status.isSuccess()) {
                         logger.info("${fakkuResult.fakkuLink} verified")
                         PandaResult.Fakku(fakkuResult.archive, fakkuResult.fakkuLink)
+                    } else if (dontSearch) {
+                        PandaResult.None(fakkuResult.archive)
                     } else {
                         logger.info("FAKKU page for '${fakkuResult.archive.title}' is unavailable")
                         val pandaLink = searchPandaForLink(client, fakkuResult.fakkuLink)
@@ -391,6 +343,8 @@ suspend fun main(args: Array<String>) {
                     )
                     if (fakkuLink != null) {
                         PandaResult.Fakku(fakkuResult.archive, fakkuLink)
+                    } else if (dontSearch) {
+                        PandaResult.None(fakkuResult.archive)
                     } else {
                         val pandaLink = getPandaLink(logger, client, fakkuResult.searchTitle)
 
@@ -451,6 +405,65 @@ suspend fun main(args: Array<String>) {
             }
             logger.info("Finished ${progress++}/${total}")
         }
+}
+
+private suspend fun processPlugin(
+    logger: Logger,
+    client: HttpClient,
+    oldTags: String?,
+    lanraragiLink: String,
+    apiKey: String,
+    plugin: LanraragiPlugin,
+    archive: LanraragiArchive,
+    pluginName: String
+): FileResult {
+    val response = usePlugin(
+        client = client,
+        lanraragiLink = lanraragiLink,
+        apiKey = apiKey,
+        plugin = plugin,
+        archive = archive
+    )
+
+    if (response.error == null) {
+        logger.info("Found $pluginName for '${archive.title}'")
+
+        if (!response.data.new_tags.isNullOrBlank()) {
+            val newTags = (oldTags?.plus(",").orEmpty() + response.data.new_tags).trim()
+            logger.info("Found tags for '${archive.title}' ($newTags)")
+            sendUpdatedMetadata(
+                client,
+                "$lanraragiLink/api/archives/${archive.arcid}/metadata",
+                newTags,
+                response.data.title,
+                response.data.summary,
+            )
+
+            val fakkuLink = response.data.new_tags.split(',')
+                .map { it.trim() }
+                .find { it.startsWith("source:") && it.contains("fakku.net", true) }
+
+            return if (fakkuLink != null) {
+                FileResult.WithFakku(
+                    archive.copy(tags = newTags),
+                    fakkuLink.substringAfter(':')
+                        .removePrefix("https://")
+                        .removePrefix("www.")
+                        .trimStart()
+                )
+            } else {
+                FileResult.WithoutFakku(
+                    archive.copy(tags = newTags)
+                )
+            }
+        } else {
+            logger.info("No new tags for '${archive.title}'")
+            return FileResult.NoNewTags(archive)
+        }
+    } else {
+        logger.info("No $pluginName metadata for '${archive.title}'")
+        return FileResult.PluginFailed(archive)
+    }
 }
 
 private suspend fun sendUpdatedMetadata(

@@ -2,7 +2,7 @@
 A quick and dirty program that connects to your LANraragi instance, and re-tags all galleries using different metadata grabbers.
 
 The process can be simplified like this:
-`koromo|koharu -> fakku -> chaika`
+`koromo|koharu|specyaml -> fakku -> chaika`
 
 Additional details on the process:
 - It checks for a Koromo or Koharu metadata file
@@ -23,3 +23,4 @@ Additional modifiers can be added, such as:
 - `onlyUntagged` to only try to tag untagged galleries
 - `dontCleanSearchTitles` disable cleaning the titles before search
 - `resetAllTags` resets the galleries tags before it tries to re-tag it
+- `dontSearch` Don't search for the archive, only if the gallery has a Fakku link that it fetches data.
