@@ -76,7 +76,7 @@ suspend fun main(args: Array<String>) {
 
     val dontCleanSearchTitles = args.any { it.equals("dontCleanSearchTitles", true) }
 
-    val resetAllTags = args.any { it.equals("resetAllTags", true) }
+    val resetAll = args.any { it.equals("resetAll", true) }
 
     val dontSearch = args.any { it.equals("dontSearch", true) }
 
@@ -186,7 +186,7 @@ suspend fun main(args: Array<String>) {
         .asFlow()
         .onEach { delay(500) }
         .map { archive ->
-            val oldTags = if (resetAllTags) {
+            val archive = if (resetAll) {
                 val dateAdded = archive.tags.split(",").map { it.trim() }
                     .find { it.startsWith("date_added:") }
                 if (!onlyUntagged && archive.tags.isNotBlank() && dateAdded != archive.tags) {
@@ -195,12 +195,16 @@ suspend fun main(args: Array<String>) {
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${archive.arcid}/metadata",
                         dateAdded.orEmpty(),
-                        null,
-                        null,
+                        archive.filename,
+                        "",
                     )
                 }
-                dateAdded
-            } else archive.tags.ifBlank { null }
+                archive.copy(
+                    title = archive.filename,
+                    summary = "",
+                    tags = dateAdded.orEmpty()
+                )
+            } else archive
 
             logger.info("Using $mode plugin for '${archive.title}'")
 
@@ -208,7 +212,6 @@ suspend fun main(args: Array<String>) {
                 "koromo" -> processPlugin(
                     logger = logger,
                     client = lanraragiClient,
-                    oldTags = oldTags,
                     lanraragiLink = lanraragiLink,
                     apiKey = apiKey,
                     plugin = koromoPlugin,
@@ -218,7 +221,6 @@ suspend fun main(args: Array<String>) {
                 "koharu" -> processPlugin(
                     logger = logger,
                     client = lanraragiClient,
-                    oldTags = oldTags,
                     lanraragiLink = lanraragiLink,
                     apiKey = apiKey,
                     plugin = koharuPlugin,
@@ -228,7 +230,6 @@ suspend fun main(args: Array<String>) {
                 "specyaml" -> processPlugin(
                     logger = logger,
                     client = lanraragiClient,
-                    oldTags = oldTags,
                     lanraragiLink = lanraragiLink,
                     apiKey = apiKey,
                     plugin = specyamlPlugin,
@@ -410,7 +411,6 @@ suspend fun main(args: Array<String>) {
 private suspend fun processPlugin(
     logger: Logger,
     client: HttpClient,
-    oldTags: String?,
     lanraragiLink: String,
     apiKey: String,
     plugin: LanraragiPlugin,
@@ -429,7 +429,7 @@ private suspend fun processPlugin(
         logger.info("Found $pluginName for '${archive.title}'")
 
         if (!response.data.new_tags.isNullOrBlank()) {
-            val newTags = (oldTags?.plus(",").orEmpty() + response.data.new_tags).trim()
+            val newTags = (archive.tags.ifEmpty { null }?.plus(",").orEmpty() + response.data.new_tags).trim()
             logger.info("Found tags for '${archive.title}' ($newTags)")
             sendUpdatedMetadata(
                 client,

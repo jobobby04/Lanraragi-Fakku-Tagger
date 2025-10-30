@@ -22,5 +22,5 @@ Additional modifiers can be added, such as:
 - `debug` for debug output
 - `onlyUntagged` to only try to tag untagged galleries
 - `dontCleanSearchTitles` disable cleaning the titles before search
-- `resetAllTags` resets the galleries tags before it tries to re-tag it
+- `resetAll` resets the gallery before it tries to re-fetch the info
 - `dontSearch` Don't search for the archive, only if the gallery has a Fakku link that it fetches data.

@@ -9,6 +9,7 @@ data class LanraragiArchive(
     val isnew: String,
     val pagecount: Int,
     val progress: Int,
+    val filename: String,
     val tags: String,
     val title: String,
     val summary: String,
