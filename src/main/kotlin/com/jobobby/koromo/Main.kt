@@ -318,7 +318,7 @@ suspend fun main(args: Array<String>) {
         .map { fakkuResult ->
             when (fakkuResult) {
                 is FakkuResult.AlreadyHaveLink -> {
-                    if (client.get(fakkuResult.fakkuLink).status.isSuccess()) {
+                    if (client.get("https://" + fakkuResult.fakkuLink).status.isSuccess()) {
                         logger.info("${fakkuResult.fakkuLink} verified")
                         PandaResult.Fakku(fakkuResult.archive, fakkuResult.fakkuLink)
                     } else if (dontSearch) {
@@ -429,7 +429,20 @@ private suspend fun processPlugin(
         logger.info("Found $pluginName for '${archive.title}'")
 
         if (!response.data.new_tags.isNullOrBlank()) {
-            val newTags = (archive.tags.ifEmpty { null }?.plus(",").orEmpty() + response.data.new_tags).trim()
+            val tags = response.data.new_tags
+                .split(',')
+                .map { it.trim() }
+                .joinToString(", ") {
+                    if (it.startsWith("source:")) {
+                        "source:" + it.removePrefix("source:")
+                            .removePrefix("https://")
+                            .removePrefix("www.")
+                            .trimStart()
+                    } else {
+                        it
+                    }
+                }
+            val newTags = (archive.tags.ifEmpty { null }?.plus(",").orEmpty() + tags).trim()
             logger.info("Found tags for '${archive.title}' ($newTags)")
             sendUpdatedMetadata(
                 client,
@@ -439,17 +452,14 @@ private suspend fun processPlugin(
                 response.data.summary,
             )
 
-            val fakkuLink = response.data.new_tags.split(',')
+            val fakkuLink = tags.split(',')
                 .map { it.trim() }
                 .find { it.startsWith("source:") && it.contains("fakku.net", true) }
 
             return if (fakkuLink != null) {
                 FileResult.WithFakku(
                     archive.copy(tags = newTags),
-                    fakkuLink.substringAfter(':')
-                        .removePrefix("https://")
-                        .removePrefix("www.")
-                        .trimStart()
+                    fakkuLink.substringAfter(':').trimStart()
                 )
             } else {
                 FileResult.WithoutFakku(
