@@ -6,5 +6,6 @@ import kotlinx.serialization.Serializable
 data class Data(
     val title: String? = null,
     val new_tags: String? = null,
+    val summary: String? = null,
     val error: String? = null
 )

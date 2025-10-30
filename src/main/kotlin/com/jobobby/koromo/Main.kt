@@ -192,7 +192,8 @@ suspend fun main(args: Array<String>) {
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${archive.arcid}/metadata",
                         dateAdded.orEmpty(),
-                        null
+                        null,
+                        null,
                     )
                 }
                 dateAdded
@@ -220,7 +221,8 @@ suspend fun main(args: Array<String>) {
                                 lanraragiClient,
                                 "$lanraragiLink/api/archives/${archive.arcid}/metadata",
                                 newTags,
-                                response.data.title
+                                response.data.title,
+                                response.data.summary,
                             )
 
                             val fakkuLink = response.data.new_tags.split(',')
@@ -264,7 +266,8 @@ suspend fun main(args: Array<String>) {
                                 lanraragiClient,
                                 "$lanraragiLink/api/archives/${archive.arcid}/metadata",
                                 newTags,
-                                response.data.title
+                                response.data.title,
+                                response.data.summary,
                             )
 
                             val fakkuLink = response.data.new_tags.split(',')
@@ -379,15 +382,15 @@ suspend fun main(args: Array<String>) {
                     }
                 }
                 is FakkuResult.WithSearch -> {
-                    val pandaResult = chooseFuzzyResult(
+                    val fakkuLink = chooseFuzzyResult(
                         logger,
                         fakkuResult.results,
                         fakkuResult.searchTitle,
                         { FakkuSearchItem.apply(this) },
                         { "https://www.fakku.net$link" }
                     )
-                    if (pandaResult != null) {
-                        PandaResult.Fakku(fakkuResult.archive, pandaResult)
+                    if (fakkuLink != null) {
+                        PandaResult.Fakku(fakkuResult.archive, fakkuLink)
                     } else {
                         val pandaLink = getPandaLink(logger, client, fakkuResult.searchTitle)
 
@@ -436,7 +439,8 @@ suspend fun main(args: Array<String>) {
                         lanraragiClient,
                         "$lanraragiLink/api/archives/${pandaResult.archive.arcid}/metadata",
                         newTags,
-                        response.data.title
+                        response.data.title,
+                        response.data.summary,
                     )
                     logger.info("Finished metadata process for '${pandaResult.archive.title}'")
                 } else {
@@ -452,20 +456,29 @@ suspend fun main(args: Array<String>) {
 private suspend fun sendUpdatedMetadata(
     client: HttpClient,
     url: String,
-    newTags: String,
-    newTitle: String?
+    newTags: String?,
+    newTitle: String?,
+    newSummary: String?,
 ) {
+    if (newTags == null && newTitle == null && newSummary == null) {
+        return
+    }
     client.put(url) {
         url {
-            parameters.append("tags", newTags)
+            if (newTags != null) {
+                parameters.append("tags", newTags)
+            }
             if (newTitle != null) {
                 parameters.append("title", newTitle)
+            }
+            if (newSummary != null) {
+                parameters.append("summary", newSummary)
             }
         }
     }
 }
 
-private suspend fun usePlugin(
+suspend fun usePlugin(
     client: HttpClient,
     lanraragiLink: String,
     apiKey: String,
@@ -606,7 +619,7 @@ private suspend fun getPandaLink(
     )
 }
 
-private fun <T> chooseFuzzyResult(
+fun <T> chooseFuzzyResult(
     logger: Logger,
     results: List<BoundExtractedResult<T>>?,
     title: String,
@@ -623,9 +636,9 @@ private fun <T> chooseFuzzyResult(
             )
 
             val result = getInput(logger, { it?.toIntOrNull()?.minus(1) }) { result ->
-                result == null || (result != -1 && result !in 0..results.lastIndex)
+                result == null || (result > -1 && result !in 0..results.lastIndex)
             }
-            if (result != -1) {
+            if (result > -1) {
                 results[result].referent.toLink()
             } else null
         }
