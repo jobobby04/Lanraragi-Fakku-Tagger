@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    val coroutinesVersion = "1.10.2"
+    val coroutinesVersion = "1.11.0"
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
