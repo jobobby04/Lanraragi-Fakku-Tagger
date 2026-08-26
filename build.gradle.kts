@@ -20,7 +20,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
-    implementation("org.jsoup:jsoup:1.21.2")
+    implementation("org.jsoup:jsoup:1.23.2")
 
     implementation("com.willowtreeapps:fuzzywuzzy-kotlin-jvm:0.9.0")
 
